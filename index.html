@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>장학금 모으기 게임</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #f0f8ff;
+  }
+  body {
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
+  #gameWrapper {
+    position: relative;
+    width: 450px;
+    height: 900px;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: #a0d8f0;
+    overflow: hidden;
+    border-radius: 20px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    touch-action: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  @media (max-width: 450px), (max-height: 900px) {
+    #gameWrapper {
+      width: 100vw;
+      height: calc(100vw * 2);
+      max-height: 100vh;
+    }
+  }
+  #startScreen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #a0d8f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+  }
+  #startBtn {
+    font-size: 32px;
+    padding: 24px 60px;
+    background: #fff;
+    border: 3px solid #2a7dc8;
+    border-radius: 18px;
+    color: #2a7dc8;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 12px #0002;
+    transition: background 0.1s, color 0.1s;
+  }
+  #startBtn:hover {
+    background: #2a7dc8;
+    color: #fff;
+  }
+  #gameArea {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0; top: 0;
+    overflow: hidden;
+    display: none;
+  }
+  #basket {
+    position: absolute;
+    bottom: 170px;
+    left: 50%;
+    width: 35px;
+    height: 84px;
+    background-color: black;
+    transform: translateX(-50%);
+    transition: left 0.08s;
+    z-index: 2;
+  }
+  .fallingItem {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+    background-color: red;
+  }
+  .blueBlock {
+    position: absolute;
+    width: 27px;
+    height: 27px;
+    background-color: blue;
+  }
+  #score {
+    position: absolute;
+    top: 18px;
+    left: 24px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    z-index: 2;
+    text-shadow: 1px 1px 6px #fff8;
+  }
+  .moveBtn {
+    position: absolute;
+    bottom: 170px;
+    width: 70px;
+    height: 70px;
+    background: #fff9;
+    border: 3px solid #bbb;
+    border-radius: 50%;
+    font-size: 44px;
+    color: #444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    z-index: 3;
+    box-shadow: 0 2px 12px #0002;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .moveBtn:active {
+    background: #e0e0e0;
+  }
+  #leftBtn { left: 24px; }
+  #rightBtn { right: 24px; }
+  #gameOverMsg {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    font-weight: bold;
+    color: #1976d2;
+    background: #fff;
+    border: 3px solid #1976d2;
+    border-radius: 16px;
+    padding: 24px 36px;
+    z-index: 20;
+    display: none;
+    box-shadow: 0 4px 24px #0003;
+    text-align: center;
+    white-space: nowrap;
+  }
+  #restartBtn {
+    margin-top: 18px;
+    font-size: 22px;
+    padding: 12px 36px;
+    background: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 2px 12px #0003;
+    transition: background 0.2s;
+    display: inline-block;
+  }
+  #restartBtn:hover {
+    background: #145a9c;
+  }
+  #endingImage {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 380px;
+    border-radius: 20px;
+    box-shadow: 0 4px 32px #0005;
+    z-index: 30;
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <div id="startScreen">
+    <button id="startBtn">게임 시작하기</button>
+  </div>
+  <div id="gameArea">
+    <div id="score">점수: 0</div>
+    <div id="basket"></div>
+    <div id="leftBtn" class="moveBtn">&#8592;</div>
+    <div id="rightBtn" class="moveBtn">&#8594;</div>
+    <div id="gameOverMsg">
+      <span id="gameOverText"></span>
+      <br>
+      <button id="restartBtn">다시하기</button>
+    </div>
+    <img id="endingImage" src="ending_image.png" alt="엔딩 이미지">
+  </div>
+</div>
+<script>
+  const gameArea = document.getElementById('gameArea');
+  const basket = document.getElementById('basket');
+  const scoreDisplay = document.getElementById('score');
+  const leftBtn = document.getElementById('leftBtn');
+  const rightBtn = document.getElementById('rightBtn');
+  const wrapper = document.getElementById('gameWrapper');
+  const startScreen = document.getElementById('startScreen');
+  const startBtn = document.getElementById('startBtn');
+  const gameOverMsg = document.getElementById('gameOverMsg');
+  const gameOverText = document.getElementById('gameOverText');
+  const restartBtn = document.getElementById('restartBtn');
+  const endingImage = document.getElementById('endingImage');
+  let score = 0;
+  let basketX = wrapper.offsetWidth / 2;
+  const basketWidth = 35;
+  const basketHeight = 84;
+  const moveStep = 72;
+  let fallingItems = [];
+  let blueBlocks = [];
+  let running = false;
+  let blueBlockTimer = 0;
+  let blueBlockInterval = 6600;
+  let lastBlueBlockTime = 0;
+  let startTime = 0;
+  const maxScore = 10;  // 엔딩 점수 10점으로 변경
+
+  function resetGame() {
+    score = 0;
+    basketX = wrapper.offsetWidth / 2;
+    updateBasket();
+    scoreDisplay.textContent = '점수: 0';
+    fallingItems.forEach(item => {
+      if (item.parentNode) item.parentNode.removeChild(item);
+    });
+    blueBlocks.forEach(item => {
+      if (item.parentNode) item.parentNode.removeChild(item);
+    });
+    fallingItems = [];
+    blueBlocks = [];
+    blueBlockInterval = 6600;
+    lastBlueBlockTime = 0;
+    startTime = Date.now();
+    gameOverMsg.style.display = 'none';
+    endingImage.style.display = 'none';
+  }
+
+  function updateBasket() {
+    if (basketX < basketWidth / 2) basketX = basketWidth / 2;
+    if (basketX > wrapper.offsetWidth - basketWidth / 2) basketX = wrapper.offsetWidth - basketWidth / 2;
+    basket.style.left = basketX + 'px';
+  }
+
+  leftBtn.addEventListener('mousedown', () => { basketX -= moveStep; updateBasket(); });
+  rightBtn.addEventListener('mousedown', () => { basketX += moveStep; updateBasket(); });
+  leftBtn.addEventListener('touchstart', e => { e.preventDefault(); basketX -= moveStep; updateBasket(); });
+  rightBtn.addEventListener('touchstart', e => { e.preventDefault(); basketX += moveStep; updateBasket(); });
+
+  window.addEventListener('keydown', (e) => {
+    if (!running) return;
+    if (e.key === 'ArrowLeft') { basketX -= moveStep; updateBasket(); }
+    if (e.key === 'ArrowRight') { basketX += moveStep; updateBasket(); }
+  });
+
+  function createFallingItem() {
+    const item = document.createElement('div');
+    item.classList.add('fallingItem');
+    item.style.left = Math.random() * (wrapper.offsetWidth - 27) + 'px';
+    item.style.top = '0px';
+    gameArea.appendChild(item);
+    return item;
+  }
+
+  function createBlueBlock() {
+    const blue = document.createElement('div');
+    blue.classList.add('blueBlock');
+    blue.style.left = Math.random() * (wrapper.offsetWidth - 27) + 'px';
+    blue.style.top = '0px';
+    gameArea.appendChild(blue);
+    return blue;
+  }
+
+  function rectsOverlap(a, b) {
+    return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+  }
+
+  function updateFallingItems(items) {
+    items.forEach((item, index) => {
+      let top = parseFloat(item.style.top);
+      top += 5;
+      item.style.top = top + 'px';
+
+      const basketRect = basket.getBoundingClientRect();
+      const itemRect = item.getBoundingClientRect();
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const basketAbs = {
+        left: basketRect.left - wrapperRect.left,
+        right: basketRect.right - wrapperRect.left,
+        top: basketRect.top - wrapperRect.top,
+        bottom: basketRect.bottom - wrapperRect.top
+      };
+      const itemAbs = {
+        left: itemRect.left - wrapperRect.left,
+        right: itemRect.right - wrapperRect.left,
+        top: itemRect.top - wrapperRect.top,
+        bottom: itemRect.bottom - wrapperRect.top
+      };
+
+      if (rectsOverlap(basketAbs, itemAbs)) {
+        score++;
+        scoreDisplay.textContent = '점수: ' + score;
+        gameArea.removeChild(item);
+        items.splice(index, 1);
+        if (score >= maxScore) {
+          endGame(true);
+        }
+      } else if (top > wrapper.offsetHeight) {
+        gameArea.removeChild(item);
+        items.splice(index, 1);
+      }
+    });
+  }
+
+  function updateBlueBlocks(blocks) {
+    blocks.forEach((block, index) => {
+      let top = parseFloat(block.style.top);
+      top += 5;
+      block.style.top = top + 'px';
+
+      const basketRect = basket.getBoundingClientRect();
+      const blockRect = block.getBoundingClientRect();
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const basketAbs = {
+        left: basketRect.left - wrapperRect.left,
+        right: basketRect.right - wrapperRect.left,
+        top: basketRect.top - wrapperRect.top,
+        bottom: basketRect.bottom - wrapperRect.top
+      };
+      const blockAbs = {
+        left: blockRect.left - wrapperRect.left,
+        right: blockRect.right - wrapperRect.left,
+        top: blockRect.top - wrapperRect.top,
+        bottom: blockRect.bottom - wrapperRect.top
+      };
+
+      if (rectsOverlap(basketAbs, blockAbs)) {
+        endGame(false);
+      } else if (top > wrapper.offsetHeight) {
+        gameArea.removeChild(block);
+        blocks.splice(index, 1);
+      }
+    });
+  }
+
+  function endGame(byScore=false) {
+    running = false;
+    if (byScore) {
+      endingImage.style.display = 'block';
+      gameOverMsg.style.display = 'none';
+    } else {
+      gameOverText.textContent = "게임 오버! 다시 시작하려면 다시하기를 눌러주세요";
+      gameOverMsg.style.display = 'block';
+      endingImage.style.display = 'none';
+    }
+  }
+
+  function gameLoop() {
+    if (!running) return;
+    if (Math.random() < 0.035) {
+      fallingItems.push(createFallingItem());
+    }
+    let now = Date.now();
+    let elapsed = now - startTime;
+    blueBlockInterval = Math.max(1500, 6600 - Math.floor(elapsed / 15));
+    if (now - lastBlueBlockTime > blueBlockInterval) {
+      blueBlocks.push(createBlueBlock());
+      lastBlueBlockTime = now;
+    }
+
+    updateFallingItems(fallingItems);
+    updateBlueBlocks(blueBlocks);
+    requestAnimationFrame(gameLoop);
+  }
+
+  startBtn.addEventListener('click', () => {
+    startScreen.style.display = 'none';
+    gameArea.style.display = 'block';
+    resetGame();
+    running = true;
+    gameLoop();
+  });
+
+  restartBtn.addEventListener('click', () => {
+    gameOverMsg.style.display = 'none';
+    resetGame();
+    running = true;
+    gameLoop();
+  });
+
+  gameArea.style.display = 'none';
+</script>
+</body>
+</html>
